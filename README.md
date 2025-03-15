@@ -93,8 +93,8 @@ Adhan Master is designed to work seamlessly across all platforms:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/adhan-master.git
-cd adhan-master
+git clone https://github.com/zub165/AzanMaster.git
+cd AzanMaster
 ```
 
 2. Install dependencies (for icon generation):
@@ -110,7 +110,7 @@ node generate-icons.js
 4. Serve the application locally:
 ```bash
 # Using Python 3
-python -m http.server 8000
+python3 -m http.server 8000
 
 # Using Node.js
 npx serve
