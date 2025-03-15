@@ -13,6 +13,7 @@ export class AdhanPlayer {
         this.currentQari = null;
         this.audioContext = null;
         this.audioInitialized = false;
+        this.isRetrying = false;
         
         // Initialize
         this.initialize();
@@ -213,24 +214,39 @@ export class AdhanPlayer {
                 });
             }
             
-            // Play the Adhan
-            const playPromise = this.audio.play();
-            
-            if (playPromise !== undefined) {
-                playPromise
-                    .then(() => {
-                        console.log('Adhan playback started successfully');
-                    })
-                    .catch(error => {
-                        console.error('Error playing Adhan:', error);
-                        this.onAdhanError(error);
-                    });
-            }
+            // Add a flag to prevent infinite fallback loops
+            if (!this.isRetrying) {
+                // Play the Adhan
+                const playPromise = this.audio.play();
                 
-            console.log(`Playing ${prayer} Adhan with Qari: ${qari.name}`);
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            console.log('Adhan playback started successfully');
+                            this.isRetrying = false;
+                        })
+                        .catch(error => {
+                            console.error('Error playing Adhan:', error);
+                            if (!this.isRetrying) {
+                                this.isRetrying = true;
+                                this.onAdhanError(error);
+                            }
+                        });
+                }
+                    
+                console.log(`Playing ${prayer} Adhan with Qari: ${qari.name}`);
+            }
         } catch (error) {
             console.error('Error in playAdhan:', error);
-            this.tryFallbackAudio();
+            if (!this.isRetrying) {
+                this.isRetrying = true;
+                this.tryFallbackAudio();
+            }
+        } finally {
+            // Reset retry flag after a delay
+            setTimeout(() => {
+                this.isRetrying = false;
+            }, 1000);
         }
     }
     
@@ -280,8 +296,8 @@ export class AdhanPlayer {
      * Try to play fallback audio
      */
     tryFallbackAudio() {
-        if (!this.currentPrayer) {
-            console.warn('No current prayer set, cannot try fallback');
+        if (!this.currentPrayer || this.isRetrying) {
+            console.warn('No current prayer set or already retrying, cannot try fallback');
             return;
         }
         
@@ -308,29 +324,44 @@ export class AdhanPlayer {
             console.error('Fallback audio error:', e);
             console.log('Fallback error code:', fallbackAudio.error ? fallbackAudio.error.code : 'unknown');
             
-            // Try CDN fallback as a last resort
-            this.tryCDNFallback();
+            // Try CDN fallback as a last resort, only if not already retrying
+            if (!this.isRetrying) {
+                this.isRetrying = true;
+                this.tryCDNFallback();
+            }
         });
         
         // Try to play
-        fallbackAudio.play()
-            .then(() => {
-                console.log('Fallback audio playing successfully');
-                // Replace the main audio with fallback
-                this.audio = fallbackAudio;
-            })
-            .catch(error => {
-                console.error('Fallback audio play failed:', error);
-                
-                // Try CDN fallback as a last resort
-                this.tryCDNFallback();
-            });
+        const playPromise = fallbackAudio.play();
+        if (playPromise !== undefined) {
+            playPromise
+                .then(() => {
+                    console.log('Fallback audio playing successfully');
+                    // Replace the main audio with fallback
+                    this.audio = fallbackAudio;
+                    this.isRetrying = false;
+                })
+                .catch(error => {
+                    console.error('Fallback audio play failed:', error);
+                    
+                    // Try CDN fallback as a last resort, only if not already retrying
+                    if (!this.isRetrying) {
+                        this.isRetrying = true;
+                        this.tryCDNFallback();
+                    }
+                });
+        }
     }
     
     /**
      * Try to play CDN fallback audio
      */
     tryCDNFallback() {
+        if (this.isRetrying) {
+            console.warn('Already retrying, skipping CDN fallback');
+            return;
+        }
+        
         console.log('Trying CDN fallback audio');
         
         // Try multiple CDN sources
@@ -350,9 +381,15 @@ export class AdhanPlayer {
      * @param {number} index - Current index
      */
     tryNextCDN(cdnPaths, index) {
+        if (this.isRetrying) {
+            console.warn('Already retrying, skipping next CDN');
+            return;
+        }
+        
         if (index >= cdnPaths.length) {
             console.error('All CDN fallbacks failed');
             alert('Unable to play Adhan. Please check your audio settings and internet connection.');
+            this.isRetrying = false;
             return;
         }
         
@@ -371,22 +408,30 @@ export class AdhanPlayer {
         
         cdnAudio.addEventListener('error', () => {
             console.error('CDN audio error for path:', cdnPath);
-            // Try next CDN
-            this.tryNextCDN(cdnPaths, index + 1);
+            // Try next CDN only if not already retrying
+            if (!this.isRetrying) {
+                this.tryNextCDN(cdnPaths, index + 1);
+            }
         });
         
         // Try to play
-        cdnAudio.play()
-            .then(() => {
-                console.log('CDN audio playing successfully');
-                // Replace the main audio with CDN audio
-                this.audio = cdnAudio;
-            })
-            .catch(error => {
-                console.error('CDN audio play failed:', error);
-                // Try next CDN
-                this.tryNextCDN(cdnPaths, index + 1);
-            });
+        const playPromise = cdnAudio.play();
+        if (playPromise !== undefined) {
+            playPromise
+                .then(() => {
+                    console.log('CDN audio playing successfully');
+                    // Replace the main audio with CDN audio
+                    this.audio = cdnAudio;
+                    this.isRetrying = false;
+                })
+                .catch(error => {
+                    console.error('CDN audio play failed:', error);
+                    // Try next CDN only if not already retrying
+                    if (!this.isRetrying) {
+                        this.tryNextCDN(cdnPaths, index + 1);
+                    }
+                });
+        }
     }
     
     /**
