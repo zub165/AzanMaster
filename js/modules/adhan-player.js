@@ -14,6 +14,8 @@ export class AdhanPlayer {
         this.audioContext = null;
         this.audioInitialized = false;
         this.isRetrying = false;
+        this.scheduledAdhans = new Map();
+        this.playLockTtlMs = 90000;
         
         // Initialize
         this.initialize();
@@ -468,15 +470,37 @@ export class AdhanPlayer {
     scheduleAdhan(prayer, time) {
         const now = new Date();
         const timeUntilAdhan = time - now;
+        const scheduleKey = this.getScheduleKey(prayer, time);
         
         // Only schedule if the prayer time is in the future
         if (timeUntilAdhan > 0) {
+            const existingSchedule = this.scheduledAdhans.get(prayer);
+
+            // Avoid creating duplicate timers for the same prayer/time pair.
+            if (existingSchedule && existingSchedule.key === scheduleKey) {
+                return;
+            }
+
+            // Clear stale timer when prayer/time target changes.
+            if (existingSchedule) {
+                clearTimeout(existingSchedule.timeoutId);
+            }
+
             console.log(`Scheduling ${prayer} Adhan for ${time.toLocaleTimeString()}`);
             
-            setTimeout(() => {
+            const timeoutId = setTimeout(() => {
                 // Get the selected Qari for this prayer
                 const qariSelect = document.getElementById(`${prayer}QariSelect`);
                 const qariId = qariSelect ? qariSelect.value : 'adhan1';
+
+                // Release this timer entry before processing to avoid stale state.
+                this.scheduledAdhans.delete(prayer);
+
+                // Prevent duplicate playback when multiple tabs or timers fire.
+                if (!this.acquirePlaybackLock(scheduleKey)) {
+                    console.log(`Skipped duplicate ${prayer} Adhan trigger`);
+                    return;
+                }
                 
                 // Play the Adhan
                 this.playAdhan(prayer, qariId);
@@ -484,6 +508,48 @@ export class AdhanPlayer {
                 // Show notification if enabled
                 this.showAdhanNotification(prayer);
             }, timeUntilAdhan);
+
+            this.scheduledAdhans.set(prayer, { key: scheduleKey, timeoutId });
+        }
+    }
+
+    /**
+     * Build a stable key for a prayer schedule.
+     * @param {string} prayer - Prayer name
+     * @param {Date} time - Prayer time
+     * @returns {string} Schedule key
+     */
+    getScheduleKey(prayer, time) {
+        return `${prayer}-${time.toISOString()}`;
+    }
+
+    /**
+     * Ensure only one trigger plays for the same prayer/time.
+     * @param {string} scheduleKey - Prayer schedule key
+     * @returns {boolean} true when playback should proceed
+     */
+    acquirePlaybackLock(scheduleKey) {
+        const storageKey = 'lastAdhanPlaybackLock';
+
+        try {
+            const now = Date.now();
+            const raw = localStorage.getItem(storageKey);
+
+            if (raw) {
+                const previous = JSON.parse(raw);
+                const isDuplicateKey = previous && previous.key === scheduleKey;
+                const isWithinLockWindow = previous && (now - previous.timestamp) < this.playLockTtlMs;
+
+                if (isDuplicateKey && isWithinLockWindow) {
+                    return false;
+                }
+            }
+
+            localStorage.setItem(storageKey, JSON.stringify({ key: scheduleKey, timestamp: now }));
+            return true;
+        } catch (error) {
+            console.warn('Playback lock unavailable, continuing playback:', error);
+            return true;
         }
     }
     
