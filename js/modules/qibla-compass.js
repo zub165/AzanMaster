@@ -91,6 +91,10 @@ export class QiblaCompass {
      */
     addCompassMarkers() {
         const compassBg = document.querySelector('.qibla-compass-bg');
+        if (!compassBg) return;
+
+        // Prevent duplicate marker buildup during repeated coordinate updates.
+        compassBg.querySelectorAll('.compass-marker, .kaaba-marker').forEach(node => node.remove());
         
         // Create markers
         const markers = [

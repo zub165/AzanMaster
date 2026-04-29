@@ -514,6 +514,26 @@ export class AdhanPlayer {
     }
 
     /**
+     * Cancel scheduled Adhan timers.
+     * @param {string|null} prayer - Optional prayer key to cancel
+     */
+    cancelScheduledAdhan(prayer = null) {
+        if (prayer) {
+            const entry = this.scheduledAdhans.get(prayer);
+            if (entry) {
+                clearTimeout(entry.timeoutId);
+                this.scheduledAdhans.delete(prayer);
+            }
+            return;
+        }
+
+        this.scheduledAdhans.forEach(({ timeoutId }) => {
+            clearTimeout(timeoutId);
+        });
+        this.scheduledAdhans.clear();
+    }
+
+    /**
      * Build a stable key for a prayer schedule.
      * @param {string} prayer - Prayer name
      * @param {Date} time - Prayer time

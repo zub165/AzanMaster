@@ -54,6 +54,7 @@ class AppInitializer {
             
             // Setup event listeners
             this.setupEventListeners();
+            this.setupSelfTestControls();
             
             // Start periodic updates
             this.startPeriodicUpdates();
@@ -211,6 +212,9 @@ class AppInitializer {
      * Update Qibla compass display
      */
     updateQiblaCompass() {
+        const { latitude, longitude } = this.locationManager.getCurrentLocation();
+        this.qiblaCompass.updateCoordinates({ latitude, longitude });
+
         const qiblaDirection = this.qiblaCompass.calculateQiblaDirection();
         const compassArrow = document.querySelector('.compass-arrow');
         const compassInfo = document.querySelector('.compass-info');
@@ -289,9 +293,9 @@ class AppInitializer {
         // Refresh location
         document.getElementById('refresh-location').addEventListener('click', async () => {
             document.getElementById('location-info').classList.add('loading');
-            await this.locationManager.refreshLocation();
+            const coordinates = await this.locationManager.refreshLocation();
+            this.prayerCalculator.setCoordinates(coordinates);
             this.updateLocationDisplay();
-            this.prayerCalculator.clearCache(); // Clear cache when location changes
             this.updatePrayerTimes();
             this.updateQiblaCompass();
         });
@@ -300,6 +304,17 @@ class AppInitializer {
         document.getElementById('theme-toggle-btn').addEventListener('click', () => {
             this.themeManager.toggleTheme();
         });
+
+        // Settings quick-jump
+        const settingsButton = document.getElementById('settings-btn');
+        if (settingsButton) {
+            settingsButton.addEventListener('click', () => {
+                const settingsSection = document.querySelector('.settings-section');
+                if (settingsSection) {
+                    settingsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        }
         
         // Adhan play buttons
         document.querySelectorAll('.play-adhan').forEach(btn => {
@@ -319,6 +334,52 @@ class AppInitializer {
             });
         });
     }
+
+    /**
+     * Setup dev-only self-test controls for quick playback verification.
+     */
+    setupSelfTestControls() {
+        const panel = document.getElementById('adhanSelfTestPanel');
+        const playButton = document.getElementById('selfTestPlayBtn');
+        const stopButton = document.getElementById('selfTestStopBtn');
+        const status = document.getElementById('selfTestStatus');
+
+        if (!panel || !playButton || !stopButton || !status) {
+            return;
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const isDevMode = params.get('dev') === '1' || localStorage.getItem('devSelfTest') === 'true';
+        panel.style.display = isDevMode ? 'block' : 'none';
+
+        playButton.addEventListener('click', () => this.runSelfTest(status));
+        stopButton.addEventListener('click', () => {
+            this.adhanPlayer.stopAdhan();
+            this.adhanPlayer.cancelScheduledAdhan();
+            status.textContent = 'Self-test stopped and pending timers cleared.';
+        });
+    }
+
+    /**
+     * Run a short duplicate-scheduling test to verify one trigger plays.
+     * @param {HTMLElement} statusElement - Status text target
+     */
+    runSelfTest(statusElement) {
+        const prayer = 'fajr';
+        const triggerTime = new Date(Date.now() + 5000);
+        const readableTime = triggerTime.toLocaleTimeString();
+
+        this.adhanPlayer.stopAdhan();
+        this.adhanPlayer.cancelScheduledAdhan(prayer);
+        localStorage.removeItem('lastAdhanPlaybackLock');
+
+        // Intentionally schedule the same trigger more than once.
+        this.adhanPlayer.scheduleAdhan(prayer, new Date(triggerTime.getTime()));
+        this.adhanPlayer.scheduleAdhan(prayer, new Date(triggerTime.getTime()));
+        this.adhanPlayer.scheduleAdhan(prayer, new Date(triggerTime.getTime()));
+
+        statusElement.textContent = `Self-test scheduled for ${readableTime}. Only one Fajr Adhan should play.`;
+    }
     
     /**
      * Start all periodic updates
@@ -335,9 +396,9 @@ class AppInitializer {
         
         // Refresh location every 30 minutes
         setInterval(async () => {
-            await this.locationManager.refreshLocation();
+            const coordinates = await this.locationManager.refreshLocation();
+            this.prayerCalculator.setCoordinates(coordinates);
             this.updateLocationDisplay();
-            this.prayerCalculator.clearCache(); // Clear cache when location changes
             this.updatePrayerTimes();
             this.updateQiblaCompass();
         }, this.intervals.location);

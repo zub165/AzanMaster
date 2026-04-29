@@ -24,6 +24,24 @@ const ASSETS_TO_CACHE = [
   'https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap'
 ];
 
+function isCacheableResponse(response) {
+  if (!response) return false;
+  if (response.status !== 200) return false;
+  if (response.headers.get('content-range')) return false;
+  return true;
+}
+
+async function putInCacheSafely(request, response) {
+  if (!isCacheableResponse(response)) return;
+
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(request, response.clone());
+  } catch (error) {
+    console.warn('[Service Worker] Skipping cache.put for request:', request.url, error);
+  }
+}
+
 // Install event - cache assets
 self.addEventListener('install', event => {
   console.log('[Service Worker] Installing Service Worker...');
@@ -80,15 +98,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          // Clone the response to store in cache
-          const responseToCache = response.clone();
-          
-          caches.open(CACHE_NAME)
-            .then(cache => {
-              // Store the response in cache with a 1-hour expiration
-              cache.put(event.request, responseToCache);
-            });
-            
+          event.waitUntil(putInCacheSafely(event.request, response));
           return response;
         })
         .catch(() => {
@@ -110,14 +120,7 @@ self.addEventListener('fetch', event => {
           
           return fetch(event.request)
             .then(response => {
-              // Clone the response to store in cache
-              const responseToCache = response.clone();
-              
-              caches.open(CACHE_NAME)
-                .then(cache => {
-                  cache.put(event.request, responseToCache);
-                });
-                
+              event.waitUntil(putInCacheSafely(event.request, response));
               return response;
             });
         })
@@ -140,14 +143,7 @@ self.addEventListener('fetch', event => {
               return response;
             }
             
-            // Clone the response to store in cache
-            const responseToCache = response.clone();
-            
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-              
+            event.waitUntil(putInCacheSafely(event.request, response));
             return response;
           })
           .catch(error => {

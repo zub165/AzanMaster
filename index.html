@@ -248,6 +248,17 @@
                         Enable notifications to receive Adhan alerts
                     </div>
                 </div>
+
+                <div class="setting-group" id="adhanSelfTestPanel" style="display: none;">
+                    <label>Adhan Self-Test (Dev)</label>
+                    <div class="adhan-controls">
+                        <button id="selfTestPlayBtn" type="button">Play Test</button>
+                        <button id="selfTestStopBtn" type="button">Stop Test</button>
+                    </div>
+                    <div id="selfTestStatus" class="setting-description">
+                        Hidden by default. Open with <code>?dev=1</code> to verify single-trigger playback.
+                    </div>
+                </div>
             </div>
 
             <!-- Qibla Compass -->

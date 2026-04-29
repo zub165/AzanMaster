@@ -82,6 +82,22 @@ export class PrayerTimeCalculator {
     setUseAPI(useAPI) {
         this.useAPI = useAPI;
     }
+
+    /**
+     * Update coordinates used for all prayer calculations
+     * @param {Object} coordinates - Latitude and longitude
+     */
+    setCoordinates(coordinates) {
+        if (!coordinates || typeof coordinates.latitude !== 'number' || typeof coordinates.longitude !== 'number') {
+            return;
+        }
+
+        this.coordinates = {
+            latitude: coordinates.latitude,
+            longitude: coordinates.longitude
+        };
+        this.clearCache();
+    }
     
     /**
      * Clear API cache
@@ -226,6 +242,7 @@ export class PrayerTimeCalculator {
             // Parse times from API
             const parsedTimes = {
                 fajr: this.parseAPITime(apiTimes.Fajr, now),
+                sunrise: this.parseAPITime(apiTimes.Sunrise, now),
                 dhuhr: this.parseAPITime(apiTimes.Dhuhr, now),
                 asr: this.parseAPITime(apiTimes.Asr, now),
                 maghrib: this.parseAPITime(apiTimes.Maghrib, now),
@@ -265,7 +282,18 @@ export class PrayerTimeCalculator {
      */
     parseAPITime(timeStr, date) {
         try {
-            const [hours, minutes] = timeStr.split(':').map(Number);
+            if (!timeStr) {
+                return null;
+            }
+
+            // API can return strings like "05:28" or "05:28 (EDT)".
+            const match = String(timeStr).match(/(\d{1,2}):(\d{2})/);
+            if (!match) {
+                return null;
+            }
+
+            const hours = Number(match[1]);
+            const minutes = Number(match[2]);
             const result = new Date(date);
             result.setHours(hours, minutes, 0, 0);
             return result;
@@ -300,10 +328,12 @@ export class PrayerTimeCalculator {
         suhoorTime.setMinutes(suhoorTime.getMinutes() - 20);
         additionalTimes.suhoor = suhoorTime;
         
-        // Calculate Ishraq time (20 minutes after sunrise)
-        // Since API doesn't provide sunrise, estimate it as halfway between Fajr and Dhuhr
-        const estimatedSunrise = new Date((apiTimes.fajr.getTime() + apiTimes.dhuhr.getTime()) / 2);
-        const ishraqTime = new Date(estimatedSunrise);
+        // Calculate Ishraq time (20 minutes after sunrise).
+        // Use API sunrise directly when available.
+        const sunriseBase = apiTimes.sunrise
+            ? new Date(apiTimes.sunrise)
+            : new Date((apiTimes.fajr.getTime() + apiTimes.dhuhr.getTime()) / 2);
+        const ishraqTime = new Date(sunriseBase);
         ishraqTime.setMinutes(ishraqTime.getMinutes() + 20);
         additionalTimes.ishraq = ishraqTime;
         

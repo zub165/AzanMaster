@@ -9,7 +9,7 @@ export class ThemeManager {
      * Constructor
      */
     constructor() {
-        this.currentTheme = 'islamic'; // Set Islamic theme as default
+        this.currentTheme = 'emerald';
         this.themes = [
             { id: 'light', name: 'Light', icon: '☀️' },
             { id: 'dark', name: 'Dark', icon: '🌙' },
@@ -37,8 +37,8 @@ export class ThemeManager {
         if (savedTheme && this.themes.some(theme => theme.id === savedTheme)) {
             this.currentTheme = savedTheme;
         } else {
-            // Default to Islamic theme if no preference
-            this.currentTheme = 'islamic';
+            // Use system preference when no manual theme is saved.
+            this.checkSystemPreference();
         }
         
         // Apply initial theme
