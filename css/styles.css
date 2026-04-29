@@ -116,6 +116,19 @@
     --primary-color-rgb-calligraphy: 121, 85, 72;
     --accent-color-rgb-calligraphy: 161, 136, 127;
     --border-color-calligraphy: #8d6e63;
+
+    /* Twilight Theme Variables */
+    --bg-color-twilight: #141627;
+    --text-color-twilight: #e8eaf6;
+    --primary-color-twilight: #7e57c2;
+    --secondary-color-twilight: #9575cd;
+    --accent-color-twilight: #26c6da;
+    --card-bg-twilight: #1f2336;
+    --card-shadow-twilight: 0 10px 28px rgba(0, 0, 0, 0.45);
+    --pattern-opacity-twilight: 0.14;
+    --primary-color-rgb-twilight: 126, 87, 194;
+    --accent-color-rgb-twilight: 38, 198, 218;
+    --border-color-twilight: #5c6bc0;
     
     /* Default Theme (Light) */
     --bg-color: var(--bg-color-light);
@@ -264,6 +277,21 @@
     --primary-color-rgb: var(--primary-color-rgb-calligraphy);
     --accent-color-rgb: var(--accent-color-rgb-calligraphy);
     --border-color: var(--border-color-calligraphy);
+}
+
+/* Twilight Theme */
+[data-theme="twilight"] {
+    --bg-color: var(--bg-color-twilight);
+    --text-color: var(--text-color-twilight);
+    --primary-color: var(--primary-color-twilight);
+    --secondary-color: var(--secondary-color-twilight);
+    --accent-color: var(--accent-color-twilight);
+    --card-bg: var(--card-bg-twilight);
+    --card-shadow: var(--card-shadow-twilight);
+    --pattern-opacity: var(--pattern-opacity-twilight);
+    --primary-color-rgb: var(--primary-color-rgb-twilight);
+    --accent-color-rgb: var(--accent-color-rgb-twilight);
+    --border-color: var(--border-color-twilight);
 }
 
 * {
@@ -517,6 +545,11 @@ body {
 
 .theme-calligraphy {
     background-color: #e9ecef;
+}
+
+.theme-twilight {
+    background: linear-gradient(135deg, #1f2336, #262b44);
+    color: #e8eaf6;
 }
 
 /* Improved responsive styles */
@@ -917,6 +950,44 @@ body {
 
 .setting-group {
     margin-bottom: 20px;
+}
+
+.readiness-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.readiness-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid rgba(var(--primary-color-rgb), 0.25);
+    border-radius: 8px;
+    background-color: rgba(var(--primary-color-rgb), 0.04);
+}
+
+.readiness-label {
+    font-size: 0.9rem;
+    color: var(--text-color);
+}
+
+.readiness-badge {
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+
+.readiness-ok {
+    color: #0f5132;
+    background-color: #d1e7dd;
+}
+
+.readiness-warn {
+    color: #664d03;
+    background-color: #fff3cd;
 }
 
 .setting-group label {
@@ -1633,6 +1704,34 @@ body {
     color: #795548;
 }
 
+.theme-twilight .theme-icon {
+    background-color: #1a1d2f;
+    color: #26c6da;
+    border-radius: 50%;
+}
+
+[data-theme="twilight"] .app-header {
+    border: 1px solid rgba(126, 87, 194, 0.45);
+}
+
+[data-theme="twilight"] .prayer-card {
+    border-color: rgba(126, 87, 194, 0.5);
+    background-image: linear-gradient(180deg, rgba(126, 87, 194, 0.12), rgba(31, 35, 54, 0));
+}
+
+[data-theme="twilight"] .prayer-card.active {
+    border-left-color: var(--accent-color-twilight);
+    box-shadow: 0 0 0 1px rgba(38, 198, 218, 0.45), var(--card-shadow-twilight);
+}
+
+[data-theme="twilight"] .play-adhan {
+    background: linear-gradient(135deg, #7e57c2, #5c6bc0);
+}
+
+[data-theme="twilight"] .play-adhan:hover {
+    background: linear-gradient(135deg, #9575cd, #7986cb);
+}
+
 /* Responsive Theme Modal */
 @media (max-width: 480px) {
     .theme-grid {
@@ -1726,7 +1825,8 @@ body {
 }
 
 .moon-phase-icon {
-    font-size: 1.2rem;
+    font-size: 2rem;
+    line-height: 1;
 }
 
 .moon-phase-name {

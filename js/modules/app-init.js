@@ -55,6 +55,7 @@ class AppInitializer {
             // Setup event listeners
             this.setupEventListeners();
             this.setupSelfTestControls();
+            this.updateReadinessStatus();
             
             // Start periodic updates
             this.startPeriodicUpdates();
@@ -167,6 +168,8 @@ class AppInitializer {
                 calculationSourceElement.textContent = this.prayerCalculator.useAPI ? 'API' : 'Local';
                 calculationSourceElement.className = this.prayerCalculator.useAPI ? 'source-api' : 'source-local';
             }
+
+            this.updateReadinessStatus();
         } catch (error) {
             console.error('Error updating prayer times:', error);
             
@@ -288,6 +291,7 @@ class AppInitializer {
             if (e.target.checked) {
                 this.notificationManager.requestPermission();
             }
+            this.updateReadinessStatus();
         });
         
         // Refresh location
@@ -298,6 +302,7 @@ class AppInitializer {
             this.updateLocationDisplay();
             this.updatePrayerTimes();
             this.updateQiblaCompass();
+            this.updateReadinessStatus();
         });
         
         // Theme toggle
@@ -387,6 +392,7 @@ class AppInitializer {
     startPeriodicUpdates() {
         // Update prayer times every minute
         setInterval(() => this.updatePrayerTimes(), this.intervals.prayerTimes);
+        setInterval(() => this.updateReadinessStatus(), 15000);
         
         // Update Islamic calendar and moon phase every hour
         setInterval(() => this.updateIslamicCalendar(), this.intervals.calendar);
@@ -401,7 +407,68 @@ class AppInitializer {
             this.updateLocationDisplay();
             this.updatePrayerTimes();
             this.updateQiblaCompass();
+            this.updateReadinessStatus();
         }, this.intervals.location);
+    }
+
+    /**
+     * Refresh readiness indicators for reliable on-time Adhan playback.
+     */
+    updateReadinessStatus() {
+        const audioBadge = document.getElementById('statusAudio');
+        const notificationsBadge = document.getElementById('statusNotifications');
+        const locationBadge = document.getElementById('statusLocation');
+        const scheduleBadge = document.getElementById('statusSchedule');
+        const summary = document.getElementById('statusSummary');
+
+        if (!audioBadge || !notificationsBadge || !locationBadge || !scheduleBadge || !summary) {
+            return;
+        }
+
+        const audioReady = Boolean(
+            this.adhanPlayer &&
+            this.adhanPlayer.audioContext &&
+            this.adhanPlayer.audioContext.state === 'running'
+        );
+        const notificationsReady = Boolean(
+            this.notificationManager &&
+            this.notificationManager.areNotificationsEnabled()
+        );
+        const locationReady = Boolean(
+            this.locationManager &&
+            this.locationManager.isAvailable()
+        );
+        const scheduleReady = Boolean(
+            this.adhanPlayer &&
+            this.adhanPlayer.scheduledAdhans &&
+            this.adhanPlayer.scheduledAdhans.size > 0
+        );
+
+        this.setReadinessBadge(audioBadge, audioReady, audioReady ? 'Ready' : 'Tap page to unlock');
+        this.setReadinessBadge(notificationsBadge, notificationsReady, notificationsReady ? 'Enabled' : 'Off');
+        this.setReadinessBadge(locationBadge, locationReady, locationReady ? 'Live' : 'Fallback');
+        this.setReadinessBadge(scheduleBadge, scheduleReady, scheduleReady ? 'Scheduled' : 'Waiting');
+
+        const readinessScore = [audioReady, notificationsReady, locationReady, scheduleReady].filter(Boolean).length;
+        if (readinessScore === 4) {
+            summary.textContent = 'All systems ready for on-time Azan.';
+        } else if (readinessScore >= 2) {
+            summary.textContent = 'Partial readiness. Improve highlighted items for better reliability.';
+        } else {
+            summary.textContent = 'Low readiness. Enable permissions and interact once with the page.';
+        }
+    }
+
+    /**
+     * Update status badge style and text.
+     * @param {HTMLElement} element - Badge element
+     * @param {boolean} isReady - Readiness state
+     * @param {string} text - Badge text
+     */
+    setReadinessBadge(element, isReady, text) {
+        element.textContent = text;
+        element.classList.remove('readiness-ok', 'readiness-warn');
+        element.classList.add(isReady ? 'readiness-ok' : 'readiness-warn');
     }
     
     /**

@@ -18,6 +18,7 @@ export class ThemeManager {
             { id: 'azure', name: 'Azure', icon: '🌊' },
             { id: 'ramadan', name: 'Ramadan', icon: '🌙' },
             { id: 'night', name: 'Night', icon: '✨' },
+            { id: 'twilight', name: 'Twilight', icon: '🌌' },
             { id: 'calligraphy', name: 'Calligraphy', icon: '📜' }
         ];
         this.islamicCalendar = new IslamicCalendar();
@@ -273,7 +274,7 @@ export class ThemeManager {
         // Add decorations for specific themes
         if (theme === 'ramadan') {
             this.addRamadanDecorations();
-        } else if (theme === 'night') {
+        } else if (theme === 'night' || theme === 'twilight') {
             this.addNightDecorations();
         } else if (theme === 'desert') {
             this.addDesertDecorations();

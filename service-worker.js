@@ -1,5 +1,5 @@
 // Service Worker for Adhan Master
-const CACHE_NAME = 'adhan-master-v1';
+const CACHE_NAME = 'adhan-master-v2';
 
 // Assets to cache
 const ASSETS_TO_CACHE = [
